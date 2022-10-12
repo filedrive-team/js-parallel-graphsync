@@ -1,0 +1,23 @@
+{
+  "name": "js-parallel-graphsync",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@dcdn/graphsync": "^0.1.0",
+    "events": "^3.3.0",
+    "interface-store": "^3.0.0",
+    "ipfs-unixfs": "^7.0.0",
+    "mime": "^3.0.0",
+    "multiaddr": "^10.0.1",
+    "multiformats": "^9.9.0",
+    "peer-id": "^0.16.0"
+  }
+}
