@@ -1,12 +1,8 @@
 import { 
     GraphSync,
-    unixfsPathSelector,
     allSelector,
     Node,
     Kind,
-    LinkLoader,
-    parseContext,
-    walkBlocks,
     SelectorNode,
   } from "@dcdn/graphsync";
   import {CID} from "multiformats";
@@ -16,13 +12,14 @@ import {
   import mime from "mime/lite";
   import {EventEmitter} from "events";
   import {UnixFS} from "ipfs-unixfs";
-  
+  import { walkBlocks,parseContext,LinkLoader } from './traversal'
+  import initWasm from './wasm_exec';
   const EXTENSION = "fil/data-transfer/1.1";
   
   const _event = new EventEmitter()
   
   _event.on('message', function (data) {
-    console.log(data,'on message')
+    console.log(data,'message');
   })
   
   interface optionType {
@@ -34,20 +31,50 @@ import {
     store:Store<CID, Uint8Array>,
     id:string
   };
-  export async function fetch(url: string, option: optionType){
-    console.log('fetch 1234455');
-    const {headers, exchange, provider, voucher, voucherType,store} = option;
+
+  type FetchInit = {
+    headers: {[key: string]: string};
+    provider: any;
+    exchange: GraphSync;
+    voucher?: any;
+    voucherType?: string;
+    store:Store<CID, Uint8Array>,
+    id:string
+  };
+
+  export async function wasm(){
+    initWasm();
+    //@ts-ignore
+    const go = new Go();
+    const res = await WebAssembly.instantiateStreaming(fetch("./selector-12.wasm"), go.importObject);
+    go.run(res.instance)
+    // Links/0/Hash
+    //@ts-ignore
+    // 'Links/0/Hash/Links/0/Hash','Links/0/Hash/Links/1/Hash','Links/0/Hash/Links/2/Hash','Links/0/Hash/Links/3/Hash','Links/0/Hash/Links/4/Hash','Links/0/Hash/Links/5/Hash','Links/0/Hash/Links/6/Hash';
+  
+    var a = unionPathSelector('Links/0/Hash/Links/0/Hash')
+    console.log(a,'aaaaaaaaaa');
+    
+    // var str = `{"f":{"f>":{"Links":{"|":[{"f":{"f>":{"0":{"f":{"f>":{"Hash":{"f":{"f>":{"Links":{"|":[{"f":{"f>":{"0":{"f":{"f>":{"Hash":{"R":{":>":{"f":{"f>":{"Links":{"f":{"f>":{"0":{"f":{"f>":{"Hash":{"@":{}}}}}}}}}}},"l":{"none":{}}}}}}}}}},{"f":{"f>":{"2":{"f":{"f>":{"Hash":{"R":{":>":{"f":{"f>":{"Links":{"f":{"f>":{"0":{"f":{"f>":{"Hash":{"@":{}}}}}}}}}}},"l":{"none":{}}}}}}}}}}]}}}}}}}}}},{"f":{"f>":{"1":{"f":{"f>":{"Hash":{"f":{"f>":{"Links":{"f":{"f>":{"1":{"f":{"f>":{"Hash":{"R":{":>":{"f":{"f>":{"Links":{"f":{"f>":{"0":{"f":{"f>":{"Hash":{"@":{}}}}}}}}}}},"l":{"none":{}}}}}}}}}}}}}}}}}}}]}}}}`;
+    // //@ts-ignore
+    // const b = parseComplexSelectors(str)
+    return a
+  }
+
+  export async function _fetch(url: string, init: FetchInit) {
+    const {headers, exchange, provider, voucher, voucherType,store} = init;
     const {root, selector: sel} = unixfsPathSelector(url);
+    const _wasm = await wasm();
+    const sel1 = JSON.parse(_wasm)
+    
     let result:any = []
-  
-    await request()
-  
+    await pro()
     return new Response(result[0], {
       status: 200,
       headers,
     });
   
-    async function request(){
+    async function pro(){
       for await (let item of provider){
         const request = exchange.request(root, sel);
         
@@ -100,13 +127,11 @@ import {
         result.push(readable);
         writer.close();
       } catch (e) {
-        console.log(e);
         const {writable} = new TransformStream();
         const writer = writable.getWriter();
         writer.abort((e as Error).message);
       }
     }
-  
   }
   
   export async function* resolve(
@@ -116,27 +141,23 @@ import {
     store:Store<CID, Uint8Array>,
     id:string
   ): AsyncIterable<Uint8Array> {
-    let path = "";
+    let path = "Links/0/Hash";
     const has = await store.has(root)
-    console.log(has,'has 123333');
-    
     for await (const blk of walkBlocks(
       new Node(root),
       parseContext().parseSelector(selector),
       loader,
     )) {
       const _links = blk.value.Links
+      console.log(blk,'blk');
       if(_links){
         _links.forEach((item:any,index:any)=>{
-          const _path = path + `/Hash/${index}/Links`;
+          const _path = path + `/Links/${index}/Hash`;
           const _length = _links.length
           _event.emit('message', {path:_path,links:_length,id})
-          
         })
       }
-      path = path + '/Hash/0/Links'
-      console.log(blk,'blk 888');
-  
+      path = path + '/Links/0/Hash'
       // if not cbor or dagpb just return the bytes
       switch (blk.cid.code) {
         case 0x70:
@@ -147,8 +168,6 @@ import {
           continue;
       }
       if (blk.value.kind === Kind.Map && blk.value.Data) {
-        console.log(11122222);
-        
         try {
           const unixfs = UnixFS.unmarshal(blk.value.Data);
           if (unixfs.type === "file") {
@@ -173,3 +192,44 @@ import {
     }
     return PeerId.createFromB58String(parts[idx]);
   }
+
+  export function unixfsPathSelector(path: string): {
+    root: CID;
+    selector: SelectorNode;
+  } {
+    
+    const {root, segments} = parsePath(path);
+    let selector = allSelector;
+    if (segments.length === 0) {
+      return {root, selector};
+    }
+    for (let i = segments.length - 1; i >= 0; i--) {
+      selector = {
+        "~": {
+          as: "unixfs",
+          ">": {
+            f: {
+              "f>": {
+                [segments[i]]: selector,
+              },
+            },
+          },
+        },
+      };
+    }
+    return {root, selector};
+  }
+
+export function parsePath(path: string): {root: CID; segments: string[]} {
+  const comps = toPathComponents(path);
+  const root = CID.parse(comps[0]);
+  return {
+    segments: comps.slice(1),
+    root,
+  };
+}
+
+export function toPathComponents(path = ""): string[] {
+  // split on / unless escaped with \
+  return (path.trim().match(/([^\\^/]|\\\/)+/g) || []).filter(Boolean);
+}

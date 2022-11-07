@@ -3,7 +3,8 @@ import {useState, useEffect} from "react";
 import * as ReactDOM from "react-dom";
 import {Noise} from "@chainsafe/libp2p-noise";
 import {create as createLibp2p, Libp2p} from "libp2p";
-import {fetch, push, GraphSync} from "@dcdn/graphsync";
+import {push, GraphSync} from "@dcdn/graphsync";
+import { _fetch } from "js-parallel-graphsync"
 import {Cachestore} from "@dcdn/cachestore";
 import type {Store} from "interface-store";
 import type {CID} from "multiformats";
@@ -99,20 +100,19 @@ class Client {
   exchange: GraphSync;
   store: Store<CID, Uint8Array>;
   constructor(net: Libp2p, store: Store<CID, Uint8Array>) {
-    console.log('constructor');
-    
     this.store = store;
     this.exchange = new GraphSync(net, store);
     this.exchange.start();
   }
   fetch(path: string, maddr: string): Promise<Response> {
-    const peerAddr = new Multiaddr(maddr);
-    return fetch(path, {
+    const peerAddr = [new Multiaddr(maddr),new Multiaddr(maddr)];
+    return _fetch(path, {
       exchange: this.exchange,
       headers: {},
       provider: peerAddr,
       voucher: ["any"],
       voucherType: "BasicVoucher",
+      store: this.store
     });
   }
   push(path: string, maddr: string): Promise<void> {
@@ -140,7 +140,6 @@ function App() {
       console.error("not client initialized");
       return;
     }
-    console.log(111111);
     
     for await (const chunk of importer(
       files.map((f) => ({path: f.name, content: fileIterator(f)})),
@@ -151,7 +150,6 @@ function App() {
         wrapWithDirectory: true,
       }
     )) {
-      console.log(chunk);
       if (chunk.path === "") {
         setUproot(chunk.cid);
       }
@@ -166,7 +164,6 @@ function App() {
     if (!client || !uproot) {
       return;
     }
-    console.log(uproot.toString(), maddr,"uploading");
     client
       .push(uproot.toString(), maddr)
       .then(() => console.log("uploaded"))
@@ -185,6 +182,8 @@ function App() {
       .then((res) => res.blob())
       .then((blob) => {
         const url = URL.createObjectURL(blob);
+        console.log(url,'uurrll');
+        
         setLoading(false);
         if (/image/.test(blob.type)) {
           setImg(url);
@@ -280,3 +279,4 @@ ReactDOM.render(
   </React.StrictMode>,
   document.getElementById("root")
 );
+

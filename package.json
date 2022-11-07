@@ -18,6 +18,8 @@
     "mime": "^3.0.0",
     "multiaddr": "^10.0.1",
     "multiformats": "^9.9.0",
+    "@ipld/dag-cbor": "^7.0.1",
+    "@ipld/dag-pb": "^2.1.16",
     "peer-id": "^0.16.0"
   }
 }

@@ -17,6 +17,7 @@
   "dependencies": {
     "@chainsafe/libp2p-noise": "5.0.0",
     "@dcdn/cachestore": "^0.0.1",
+    "@ipld/dag-cbor": "^8.0.0",
     "buffer": "^6.0.3",
     "ipfs-unixfs-importer": "^9.0.6",
     "libp2p": "^0.35.8",
