@@ -11,7 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@dcdn/graphsync": "^0.1.0",
+    "@dcdn/graphsync": "0.1.0",
     "events": "^3.3.0",
     "interface-store": "^3.0.0",
     "ipfs-unixfs": "^7.0.0",

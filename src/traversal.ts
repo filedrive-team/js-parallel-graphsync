@@ -266,6 +266,7 @@ export function parseContext() {
     },
     parseSelector(node: SelectorNode): Selector {
       const key = Object.keys(node)[0];
+      
       switch (key) {
         case "R":
           return this.parseExploreRecursive(node[key]);
@@ -415,13 +416,13 @@ export class ExploreFields implements Selector {
 }
 
 export class ExploreUnion implements Selector{
-  _members: Selector[];
-  constructor(members: Selector[]){
-    this._members = members
+  members: Selector[];
+  constructor(_members: Selector[]){
+    this.members = _members
   }
   interests(): PathSegment[] {
     let v :PathSegment[] = []
-    this._members.forEach((m)=>{
+    this.members.forEach((m)=>{
       if (m.interests() != null){
         v.push(...m.interests())
       }
@@ -430,7 +431,7 @@ export class ExploreUnion implements Selector{
   }
   explore(node: any, path: PathSegment): Selector | null {
     let nonNilResults:Selector[] =[]
-    this._members.forEach((member)=>{
+    this.members.forEach((member)=>{
       const resultSelector = member.explore(node, path);
       if(resultSelector !== null){
         nonNilResults.push(resultSelector)
@@ -446,9 +447,9 @@ export class ExploreUnion implements Selector{
   }
   decide(node: any): boolean {
     let _bool = false
-    this._members.forEach((m)=>{
-        if (m.decide(node)) {
-          _bool = true
+    this.members.forEach((m)=>{
+      if (m.decide(node)) {
+        _bool = true
       }
     })
     return _bool
@@ -540,6 +541,7 @@ export class ExploreRecursive implements Selector {
       return true;
     }
     // TODO: ExploreUnion
+    
     return false;
   }
 
@@ -556,6 +558,7 @@ export class ExploreRecursive implements Selector {
       return replacement;
     }
     // TODO: ExploreUnion
+    
     return nextSelector;
   }
 }
@@ -698,7 +701,6 @@ export async function* walkBlocks(
       return;
   }
 
-
   // check if there's specific paths we should explore
   const attn = sel.interests();
   if (attn.length) {
@@ -709,7 +711,7 @@ export async function* walkBlocks(
       }
       const sNext = sel.explore(nd.value, ps);
       if (sNext !== null) {
-        yield* walkBlocks(value, sNext, source);
+        yield* walkBlocks(new Node(value), sNext, source);
       }
     }
   } else {

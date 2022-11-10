@@ -105,7 +105,7 @@ class Client {
     this.exchange.start();
   }
   fetch(path: string, maddr: string): Promise<Response> {
-    const peerAddr = [new Multiaddr(maddr),new Multiaddr(maddr)];
+    const peerAddr = [new Multiaddr(maddr)];
     return _fetch(path, {
       exchange: this.exchange,
       headers: {},
