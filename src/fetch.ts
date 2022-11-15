@@ -42,28 +42,27 @@ import {
     id:string
   };
 
-  export async function wasm(){
+  export async function pathToSelector(){
     initWasm();
     //@ts-ignore
     const go = new Go();
     const res = await WebAssembly.instantiateStreaming(fetch("./selector-12.wasm"), go.importObject);
     go.run(res.instance)
-    //@ts-ignore
-    var a = unionPathSelector('Links/0/Hash')
-    console.log(a,'unionPathSelectorunionPathSelectorunionPathSelector');
-    console.log(JSON.stringify(allSelector),'allSelectorallSelector');
     
+    //@ts-ignore
+    const _selector = unionPathSelector('Links/0/Hash/Links/0/Hash/','Links/0/Hash/Links/1/Hash/')
+    console.log(_selector,'unionPathSelectorunionPathSelectorunionPathSelector');
     // var str = `{"f":{"f>":{"Links":{"|":[{"f":{"f>":{"0":{"f":{"f>":{"Hash":{"f":{"f>":{"Links":{"|":[{"f":{"f>":{"0":{"f":{"f>":{"Hash":{"R":{":>":{"f":{"f>":{"Links":{"f":{"f>":{"0":{"f":{"f>":{"Hash":{"@":{}}}}}}}}}}},"l":{"none":{}}}}}}}}}},{"f":{"f>":{"2":{"f":{"f>":{"Hash":{"R":{":>":{"f":{"f>":{"Links":{"f":{"f>":{"0":{"f":{"f>":{"Hash":{"@":{}}}}}}}}}}},"l":{"none":{}}}}}}}}}}]}}}}}}}}}},{"f":{"f>":{"1":{"f":{"f>":{"Hash":{"f":{"f>":{"Links":{"f":{"f>":{"1":{"f":{"f>":{"Hash":{"R":{":>":{"f":{"f>":{"Links":{"f":{"f>":{"0":{"f":{"f>":{"Hash":{"@":{}}}}}}}}}}},"l":{"none":{}}}}}}}}}}}}}}}}}}}]}}}}`;
     // //@ts-ignore
     // const b = parseComplexSelectors(str)
-    return a
+    return _selector
   }
 
   export async function _fetch(url: string, init: FetchInit) {
     const {headers, exchange, provider, voucher, voucherType,store} = init;
-    const {root, selector: sel1} = unixfsPathSelector(url);
-    const _wasm = await wasm();
-    const sel = JSON.parse(_wasm)
+    const {root} = unixfsPathSelector(url);
+    const _wasm = await pathToSelector();
+    // const sel = JSON.parse(_wasm)
     
     let result:any = []
     await pro()
@@ -74,8 +73,7 @@ import {
   
     async function pro(){
       for await (let item of provider){
-        const request = exchange.request(root, sel);
-        
+        const request = exchange.request(root, item.selector);
         const extensions: {[key: string]: any} = {};
         if (voucher && voucherType) {
           const id = Date.now();
@@ -87,7 +85,7 @@ import {
               Pull: true,
               Paus: false,
               Part: false,
-              Stor: sel,
+              Stor: item.selector,
               Vouch: voucher,
               VTyp: voucherType,
               XferID: id,
@@ -96,11 +94,13 @@ import {
             Response: null,
           };
         }
-        const pid = getPeerID(item);
-        exchange.network.peerStore.addressBook.add(pid, [item]);
+        console.log(item.peer,'item.peer000');
+        
+        const pid = getPeerID(item.peer);
+        exchange.network.peerStore.addressBook.add(pid, [item.peer]);
         request.open(pid, extensions);
         
-        const content = resolve(root, sel, request,store,request.id);
+        const content = resolve(root, item.selector, request,store,request.id);
         const iterator = content[Symbol.asyncIterator]();
         const parts = url.split(".");
         const extension = parts.length > 1 ? parts.pop() : undefined;

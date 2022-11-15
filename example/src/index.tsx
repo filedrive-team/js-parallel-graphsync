@@ -17,6 +17,7 @@ import {importer} from "ipfs-unixfs-importer";
 
 const CID_KEY = "/cid/default";
 const ADDR_KEY = "/maddr/default";
+const SELECTOR_KEY = 'selector/default'
 const MAX_CHUNK_SIZE = 262144;
 
 function fileIterator(file: File): AsyncIterable<Uint8Array> {
@@ -104,8 +105,23 @@ class Client {
     this.exchange = new GraphSync(net, store);
     this.exchange.start();
   }
-  fetch(path: string, maddr: string): Promise<Response> {
-    const peerAddr = [new Multiaddr(maddr)];
+  fetch(path: string, maddr: string,selector:string): Promise<Response> {
+    // const sel1 = {"f":{"f>":{"Links":{"f":{"f>":{"0":{"f":{"f>":{"Hash":{"f":{"f>":{"Links":{"f":{"f>":{"0":{"f":{"f>":{"Hash":{"R":{":>":{"|":[{".":{}},{"a":{">":{"@":{}}}}]},"l":{"none":{}}}}}}}}}}}}}}}}}}}}}}
+    // const sel2 = {"f":{"f>":{"Links":{"f":{"f>":{"0":{"f":{"f>":{"Hash":{"f":{"f>":{"Links":{"f":{"f>":{"1":{"f":{"f>":{"Hash":{"R":{":>":{"|":[{".":{}},{"a":{">":{"@":{}}}}]},"l":{"none":{}}}}}}}}}}}}}}}}}}}}}}
+    const addArr = maddr.split('&')
+    const selectorArr = selector.split('&');
+    console.log(selectorArr,'selectorArr1234');
+    
+    const peerAddr = [
+      {
+        peer:new Multiaddr(addArr[0]),
+        selector:JSON.parse(selectorArr[0])
+      },
+      {
+        peer:new Multiaddr(addArr[1]),
+        selector:JSON.parse(selectorArr[1])
+      }
+    ];
     return _fetch(path, {
       exchange: this.exchange,
       headers: {},
@@ -129,6 +145,9 @@ class Client {
 function App() {
   const [root, setRoot] = useState(localStorage.getItem(CID_KEY) ?? "");
   const [maddr, setMaddr] = useState(localStorage.getItem(ADDR_KEY) ?? "");
+  const [selector, setSelector] = useState(localStorage.getItem(SELECTOR_KEY) ?? "");
+
+  
   const [img, setImg] = useState("");
   const [vid, setVid] = useState("");
   const [loading, setLoading] = useState(false);
@@ -176,9 +195,11 @@ function App() {
     setLoading(true);
     localStorage.setItem(CID_KEY, root);
     localStorage.setItem(ADDR_KEY, maddr);
+    localStorage.setItem(SELECTOR_KEY, selector);
+    
     const start = performance.now();
     client
-      .fetch(root, maddr)
+      .fetch(root, maddr,selector)
       .then((res) => res.blob())
       .then((blob) => {
         const url = URL.createObjectURL(blob);
@@ -250,10 +271,20 @@ function App() {
         type="text"
         autoComplete="off"
         spellCheck="false"
-        placeholder="multi address"
+        placeholder="multi address,multiple connected with&"
         className="ipt"
         value={maddr}
         onChange={(e) => setMaddr(e.target.value)}
+      />
+      <input
+        id="selector"
+        type="text"
+        autoComplete="off"
+        spellCheck="false"
+        placeholder="selector，multiple connected with&"
+        className="ipt"
+        value={selector}
+        onChange={(e) => setSelector(e.target.value)}
       />
       <button className="btn" onClick={sendRequest} disabled={disabled}>
         request
